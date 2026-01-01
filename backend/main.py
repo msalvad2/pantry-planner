@@ -1,12 +1,27 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+# fastapi
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+# pydantic
+from pydantic import BaseModel
+# sqlalchemy
+from sqlalchemy.orm import Session
+# local module
+from .database import SessionLocal
+from . import crud
 
+
+# creates new session, gives it to the route, and closes it automatically
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 #Creates the backend server
 app = FastAPI(title= "Mini Pantry API")
 
-#gives the frontend permission to give requests
+#gives the frontend permission to make requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -18,42 +33,28 @@ app.add_middleware(
 class ItemCreate(BaseModel):
     name: str
 
-#list of items
-pantry_items = [
-    {"id": 1, "name": "milk"},
-    {"id": 2, "name": "bread"},
-    {"id": 3, "name": "cheese"}
-]
-
-# Determine the next ID safely | Will run once when FastAPI starts
-next_id = 1
-
-if pantry_items:
-    for item in pantry_items:
-        if item["id"] >= next_id:
-            next_id = item["id"] + 1
 
 
 #returns all of the pantry items
 @app.get("/pantry")
-def get_pantry_items():
-    return pantry_items
+def get_pantry_items(db: Session = Depends(get_db)):
+    return crud.list_pantry_items(db)
 
 #returns specific item based on item id
 @app.get("/pantry/{item_id}")
-def get_pantry_item(item_id: int):
-    for item in pantry_items:
-        if item["id"] == item_id:
-            return item
-    raise HTTPException(
-        status_code= 404,
-        detail= "Item not Found"
-    )
+def get_pantry_item(item_id: int, db: Session = Depends(get_db)):
+    item = crud.get_pantry_item(db, item_id)
+
+    if item is None:
+        raise HTTPException(
+            status_code= 404,
+            detail= "Item not Found"
+        )
+    return item
 
 #adds a new item to the pantry list
 @app.post("/pantry", status_code= 201)
-def create_pantry_item(item: ItemCreate):
-    global next_id
+def create_pantry_item(item: ItemCreate, db: Session = Depends(get_db)):
 
     #confirm empty item won't be added
     cleaned = item.name.strip().lower()
@@ -63,16 +64,13 @@ def create_pantry_item(item: ItemCreate):
             detail= "Item name cannot be empty"
         )
 
-    new_item = {"id": next_id, "name": cleaned}
-    pantry_items.append(new_item)
-    #update the next id after each request
-    next_id += 1
+    new_item = crud.create_pantry_item(db, cleaned)
 
     return new_item
 
 #update item in list using id
 @app.put("/pantry/{item_id}")
-def update_pantry_item(item_id: int, updated_item: ItemCreate):
+def update_pantry_item(item_id: int, updated_item: ItemCreate, db: Session = Depends(get_db)):
     cleaned = updated_item.name.strip().lower()
 
     if cleaned == "":
@@ -81,24 +79,22 @@ def update_pantry_item(item_id: int, updated_item: ItemCreate):
             detail="Item name cannot be empty"
         )
     
-    for item in pantry_items:
-        if item["id"] == item_id:
-            item["name"] = cleaned
-            return item
-        
-    raise HTTPException(
-        status_code= 404,
-        detail="Item not found"
-    )
-#remove item from list using id
+    item = crud.update_pantry_item(db, item_id, cleaned)
+    
+    if item is None:
+        raise HTTPException(
+            status_code= 404,
+            detail="Item not found"
+        )
+    return item
 
+#remove item from list using id
 @app.delete("/pantry/{item_id}", status_code=204)
-def remove_pantry_item(item_id: int):
-    for i, item in enumerate(pantry_items):
-        if item["id"] == item_id:
-            pantry_items.pop(i)
-            return
-    raise HTTPException(
-        status_code=404,
-        detail="Item not found"
-    )
+def remove_pantry_item(item_id: int, db: Session = Depends(get_db)):
+    item = crud.delete_pantry_item(db, item_id)
+    
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found"
+        )

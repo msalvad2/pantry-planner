@@ -27,8 +27,10 @@ This project also serves as a hands-on learning experience for building a **prod
 ### Backend
 - **Python**
 - **FastAPI**
+- **SQLAlchemy ORM**
+- **SQLite database**
 - RESTful API design (CRUD)
-- CORS configuration for cross-origin requests
+- CORS configuration
 
 ---
 
@@ -40,7 +42,7 @@ This project follows modern full-stack design principles:
 - The **frontend never mutates data directly**
 - All data changes go through REST API endpoints
 - After every mutation, the frontend **re-fetches backend truth**
-- UI state remains synchronized with backend state at all times
+- UI state always reflects the database
 
 This mirrors real-world production architecture used in industry applications.
 
@@ -49,66 +51,97 @@ This mirrors real-world production architecture used in industry applications.
 ## Current Features
 
 ### Pantry Management
-- Add ingredients
-- Edit ingredients
-- Delete ingredients
-- Persistent state while backend is running
+- Add, edit, and delete pantry items  
+- Clean React state management (immutability, lifted state)  
+- Full CRUD integration with backend  
+- Persistent storage using SQLite (via SQLAlchemy ORM)  
 
-### Backend
-- RESTful endpoints:
-  - `GET /pantry`
-  - `POST /pantry`
-  - `PUT /pantry/{id}`
-  - `DELETE /pantry/{id}`
-- Input validation and error handling
-- Safe ID generation (no collisions after deletes)
-- CORS-enabled for frontend communication
+
+### Backend (FastAPI + SQLAlchemy)
+- REST API with proper HTTP semantics  
+- SQLite persistence via SQLAlchemy ORM  
+- Clear separation between:
+  - API routes  
+  - CRUD logic  
+  - Database models  
+- Meaningful errors (400, 404, 204)  
+- CORS-enabled for frontend communication 
 
 ### Frontend
-- Clean React state management with immutability
-- Centralized API client using Axios
-- Full CRUD integration with backend
-- Multi-page navigation using React Router
+- React Router multi-page layout  
+- Centralized Axios API client  
+- Automatic data refresh after writes  
+
+---
+
+## Database Architecture
+
+Pantry Planner now uses a real database layer:
+
+- **SQLite** — fast and lightweight for local development  
+- **SQLAlchemy** — models + queries, not raw SQL  
+
+Current tables include:
+
+- pantry items
+- (in progress) canonical ingredients + recipes
+- (planned) recipe–ingredient relationships
+
+This foundation enables smarter features like recipe suggestions and shopping lists.
 
 ---
 
 ## Project Structure
 ```
 pantry-planner/
-├── backend/
-│   ├── main.py              # FastAPI application
-│
 ├── frontend/
-│   ├── src/
-│   │   ├── api/             # Axios client
-│   │   ├── pages/           # React pages
-│   │   └── App.js           # Main application logic
-│   └── package.json
+│   └── src/
+│       ├── api/
+│       │   └── client.js
+│       ├── pages/
+│       │   ├── Home.js
+│       │   ├── Pantry.js
+│       │   ├── Recipes.js
+│       │   └── ShoppingList.js
+│       ├── IngredientList.js
+│       ├── App.js
+│       └── index.js
+│
+├── backend/
+│   ├── main.py          # FastAPI app + routes
+│   ├── crud.py          # Database operations
+│   ├── models.py        # SQLAlchemy models
+│   ├── database.py      # Engine + session management
+│   ├── init_db.py       # DB initialization script
+│   └── pantry.db        # (ignored in git)
+│
 └── README.md
 ```
 
 ---
 
-## What I Learned
+## What I’ve Learned So Far
 
 - Designing a backend as the **authoritative data source**
-- Implementing full CRUD with RESTful APIs
-- Migrating frontend HTTP logic from Fetch to Axios
-- Centralizing API communication for maintainability
-- Handling async data flow and error states
-- Refactoring working code to improve structure and clarity
-- Managing real-world Git workflows (pulling remote changes, clean commits)
+- Implementing CRUD APIs correctly
+- Using SQLAlchemy instead of in-memory storage
+- Separating:
+  - routes  
+  - business logic  
+  - database models  
+- Debugging using Swagger + DevTools  
+- Maintaining a clean Git history  
 
 ---
 
 ## Planned Enhancements
 
-- Database integration (SQLite or PostgreSQL)
-- Recipe matching based on available ingredients
+- Ingredient + Recipe data model (many-to-many)
+- Recipe suggestions based on pantry contents
 - Shopping list generation
-- Improved UI/UX
-- Loading and error states
-- Deployment
+- Per-user pantries
+- Deployment (Render / Railway / Vercel)
+- Database migrations as schema evolves
 
 
 ---
@@ -131,6 +164,13 @@ npm install
 npm start
 ```
 - App runs at: `http://localhost:3000`
+
+---
+
+## Notes
+
+- `pantry.db` is **not tracked in Git** (on purpose)  
+  Databases are environment-specific and can be regenerated.  
 
 ---
 

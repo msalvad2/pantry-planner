@@ -71,7 +71,7 @@ function App() {
     await client.put(`pantry/${id}`, {name: cleaned})
     //refetch data to update frontend state
       fetchPantry()
-      
+
     } catch(err){
       console.error("Failed to update item", err)
     }
