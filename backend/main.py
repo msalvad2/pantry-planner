@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 # pydantic
-from pydantic import BaseModel
+from .schemas import ItemCreate, RecipeOut, RecipeSummary
 # sqlalchemy
 from sqlalchemy.orm import Session
 # local module
@@ -30,10 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ItemCreate(BaseModel):
-    name: str
-
-
 
 #returns all of the pantry items
 @app.get("/pantry")
@@ -52,7 +48,7 @@ def get_pantry_item(item_id: int, db: Session = Depends(get_db)):
         )
     return item
 
-#adds a new item to the pantry list
+#adds a new item to the pantry lists
 @app.post("/pantry", status_code= 201)
 def create_pantry_item(item: ItemCreate, db: Session = Depends(get_db)):
 
@@ -98,3 +94,43 @@ def remove_pantry_item(item_id: int, db: Session = Depends(get_db)):
             status_code=404,
             detail="Item not found"
         )
+
+######recipe#########
+
+#gets a recipe with its information
+@app.get("/recipes/{recipe_id}", response_model=RecipeOut)
+
+def get_recipe(recipe_id: int, db:Session = Depends(get_db)):
+    recipe = crud.get_recipe_with_ingredients(db, recipe_id)
+    if recipe is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Recipe not found"
+        )
+    return recipe
+
+@app.get("/recipes", response_model=list[RecipeSummary])
+
+def get_recipes(db: Session = Depends(get_db)):
+    return crud.get_all_recipes(db)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
